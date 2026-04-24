@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tater 🐾">
+<title>Tater's Potty Tracker 🐾</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #FFF9F0;
+    min-height: 100vh;
+    padding: 16px 16px 40px;
+    color: #3d2c1e;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #3d2c1e;
+    margin-bottom: 2px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 0.82rem;
+    color: #9b7b5e;
+    margin-bottom: 18px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+
+  .card-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #b8967a;
+    margin-bottom: 10px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 14px 8px;
+    border: 2.5px solid transparent;
+    border-radius: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #f5f0ea;
+    color: #5a3e2b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn .emoji { font-size: 1.6rem; }
+  .btn:active { transform: scale(0.96); }
+
+  .btn.active-pee   { background: #FFF3C4; border-color: #F5C518; color: #7a5900; }
+  .btn.active-poop  { background: #FFE5C2; border-color: #C87941; color: #6b3300; }
+  .btn.active-both  { background: #FFD6F0; border-color: #D966A8; color: #6b0044; }
+  .btn.active-outside { background: #D4F5D4; border-color: #3BB83B; color: #1a5c1a; }
+  .btn.active-inside  { background: #FFD6D6; border-color: #E05555; color: #6b0000; }
+
+  .log-btn {
+    width: 100%;
+    padding: 16px;
+    background: #3d2c1e;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 6px;
+  }
+
+  .log-btn:active { transform: scale(0.98); }
+  .log-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .sync-note {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #b8967a;
+    margin-bottom: 12px;
+  }
+
+  .streak-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .streak-chip {
+    background: white;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    color: #3d2c1e;
+  }
+
+  .log-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0e8df;
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-emojis { font-size: 1.3rem; min-width: 52px; text-align: center; }
+
+  .log-details { flex: 1; }
+  .log-time { font-size: 0.72rem; color: #9b7b5e; font-weight: 700; }
+  .log-type { font-size: 0.9rem; font-weight: 800; color: #3d2c1e; }
+
+  .location-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .badge-outside { background: #D4F5D4; color: #1a5c1a; }
+  .badge-inside  { background: #FFD6D6; color: #6b0000; }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px 0;
+    color: #c4a98a;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    opacity: 0.35;
+    padding: 4px;
+  }
+  .delete-btn:hover { opacity: 0.8; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #3d2c1e;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .connecting {
+    text-align: center;
+    padding: 16px;
+    color: #9b7b5e;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>🐾 Tater's Potty Log</h1>
+<p class="subtitle">Track every trip • Syncs instantly</p>
+
+<div class="streak-bar">
+  <div class="streak-chip">🌿 Outside: <span id="outsideCount">0</span></div>
+  <div class="streak-chip">🏠 Inside: <span id="insideCount">0</span></div>
+  <div class="streak-chip">📋 Today: <span id="todayCount">0</span></div>
+</div>
+
+<div class="card">
+  <div class="card-label">What happened? 💬</div>
+  <div class="btn-row">
+    <button class="btn" id="btnPee" onclick="selectOption('type','pee',this)">
+      <span class="emoji">💛</span>Pee
+    </button>
+    <button class="btn" id="btnPoop" onclick="selectOption('type','poop',this)">
+      <span class="emoji">💩</span>Poop
+    </button>
+    <button class="btn" id="btnBoth" onclick="selectOption('type','both',this)">
+      <span class="emoji">💛💩</span>Both
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-label">Where? 📍</div>
+  <div class="btn-row">
+    <button class="btn" id="btnOutside" onclick="selectOption('location','outside',this)">
+      <span class="emoji">🌿</span>Outside
+    </button>
+    <button class="btn" id="btnInside" onclick="selectOption('location','inside',this)">
+      <span class="emoji">🏠</span>Inside
+    </button>
+  </div>
+</div>
+
+<button class="log-btn" id="logBtn" onclick="logEntry()" disabled>➕ Log It</button>
+<p class="sync-note">🔄 Real-time sync — both phones update instantly</p>
+
+<div class="card">
+  <div class="card-label">Today's Log 📋</div>
+  <div id="logList"><div class="connecting">Connecting… 🐾</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0z2VN1usMA1u5D0Y35_dO4uSszoMR-e8",
+    authDomain: "tater-potty-tracker.firebaseapp.com",
+    databaseURL: "https://tater-potty-tracker-default-rtdb.firebaseio.com",
+    projectId: "tater-potty-tracker",
+    storageBucket: "tater-potty-tracker.firebasestorage.app",
+    messagingSenderId: "677721872187",
+    appId: "1:677721872187:web:124fd7d36304668806491e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const logsRef = ref(db, 'potty-logs');
+
+  const typeEmojis  = { pee: '💛', poop: '💩', both: '💛💩' };
+  const typeLabels  = { pee: 'Pee', poop: 'Poop', both: 'Pee & Poop' };
+  let selected = { type: null, location: null };
+
+  window.selectOption = function(group, value, el) {
+    selected[group] = value;
+    const typeIds = ['btnPee','btnPoop','btnBoth'];
+    const locIds  = ['btnOutside','btnInside'];
+    const ids = group === 'type' ? typeIds : locIds;
+    ids.forEach(id => document.getElementById(id).className = 'btn');
+    el.classList.add('active-' + value);
+    document.getElementById('logBtn').disabled = !(selected.type && selected.location);
+  };
+
+  window.logEntry = async function() {
+    const entry = {
+      type: selected.type,
+      location: selected.location,
+      time: new Date().toISOString()
+    };
+    await push(logsRef, entry);
+    showToast(entry.location === 'outside' ? '✅ Good boy Tater!' : '😬 Logged inside');
+    resetSelections();
+  };
+
+  window.deleteEntry = function(key) {
+    remove(ref(db, 'potty-logs/' + key));
+  };
+
+  function resetSelections() {
+    selected = { type: null, location: null };
+    ['btnPee','btnPoop','btnBoth','btnOutside','btnInside'].forEach(id => {
+      document.getElementById(id).className = 'btn';
+    });
+    document.getElementById('logBtn').disabled = true;
+  }
+
+  // Real-time listener
+  onValue(logsRef, snapshot => {
+    const data = snapshot.val() || {};
+    const today = new Date().toDateString();
+
+    const entries = Object.entries(data)
+      .map(([key, val]) => ({ key, ...val }))
+      .filter(e => new Date(e.time).toDateString() === today)
+      .sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    // Stats
+    document.getElementById('outsideCount').textContent = entries.filter(e => e.location === 'outside').length;
+    document.getElementById('insideCount').textContent  = entries.filter(e => e.location === 'inside').length;
+    document.getElementById('todayCount').textContent   = entries.length;
+
+    // Log list
+    const list = document.getElementById('logList');
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state">No logs yet — Tater\'s been holding it! 🐶</div>';
+      return;
+    }
+
+    list.innerHTML = entries.map(e => {
+      const t = new Date(e.time);
+      const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const badgeClass = e.location === 'outside' ? 'badge-outside' : 'badge-inside';
+      const locLabel   = e.location === 'outside' ? '🌿 Outside' : '🏠 Inside';
+      return `
+        <div class="log-entry">
+          <div class="log-emojis">${typeEmojis[e.type]}</div>
+          <div class="log-details">
+            <div class="log-type">${typeLabels[e.type]}</div>
+            <div class="log-time">🕐 ${timeStr}</div>
+          </div>
+          <span class="location-badge ${badgeClass}">${locLabel}</span>
+          <button class="delete-btn" onclick="deleteEntry('${e.key}')" title="Delete">🗑️</button>
+        </div>`;
+    }).join('');
+  });
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
