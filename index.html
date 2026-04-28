@@ -64,15 +64,17 @@
   .datetime-input { width: 100%; padding: 10px 14px; border: 2px solid #e8ddd5; border-radius: 12px; font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 700; color: #3d2c1e; background: #faf7f4; margin-top: 12px; display: none; }
   .datetime-input.visible { display: block; }
 
-  .food-slots { display: flex; flex-direction: column; gap: 10px; }
-  .food-slot { display: flex; align-items: center; gap: 10px; background: #faf7f4; border-radius: 14px; padding: 12px 14px; }
-  .food-slot-time { font-size: 0.75rem; font-weight: 900; color: #b8967a; min-width: 38px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .food-slot-emoji { font-size: 1.3rem; }
-  .food-input { flex: 1; border: none; background: transparent; font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 700; color: #3d2c1e; outline: none; }
-  .food-input::placeholder { color: #c4a98a; }
-  .food-log-btn { background: none; border: 2px solid #3d2c1e; border-radius: 10px; padding: 5px 10px; font-family: 'Nunito', sans-serif; font-size: 0.72rem; font-weight: 800; color: #3d2c1e; cursor: pointer; white-space: nowrap; }
-  .food-log-btn.logged { background: #3d2c1e; color: white; }
+  /* Food checkboxes */
+  .food-slots { display: flex; flex-direction: column; gap: 8px; }
+  .food-slot { display: flex; align-items: center; gap: 14px; background: #faf7f4; border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: background 0.15s; }
+  .food-slot.checked { background: #D4F5D4; }
+  .food-slot-emoji { font-size: 1.4rem; }
+  .food-slot-label { flex: 1; font-size: 0.95rem; font-weight: 800; color: #3d2c1e; }
+  .food-slot-time-label { font-size: 0.72rem; font-weight: 700; color: #9b7b5e; }
+  .food-checkbox { width: 26px; height: 26px; border-radius: 8px; border: 2.5px solid #c4a98a; background: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; transition: all 0.15s; }
+  .food-slot.checked .food-checkbox { background: #3BB83B; border-color: #3BB83B; color: white; }
   .food-date-picker { width: 100%; padding: 10px 14px; border: 2px solid #e8ddd5; border-radius: 12px; font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 700; color: #3d2c1e; background: #faf7f4; }
+
   .food-history-slot { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0e8df; font-size: 0.82rem; }
   .food-history-slot:last-child { border-bottom: none; }
   .food-history-time { font-size: 0.68rem; font-weight: 900; color: #b8967a; min-width: 36px; text-transform: uppercase; }
@@ -171,7 +173,7 @@
     <input type="date" id="foodDate" class="food-date-picker" onchange="renderFoodSlots()" />
   </div>
   <div class="card">
-    <div class="card-label">Meals 🍗</div>
+    <div class="card-label">Tap to mark meal as fed 🍗</div>
     <div class="food-slots" id="foodSlots"></div>
   </div>
   <div class="card">
@@ -197,10 +199,10 @@
     </div>
   </div>
   <div class="chart-wrap">
-    <div class="chart-title">🍗 Meals Logged — Last 14 Days</div>
+    <div class="chart-title">🍗 Meals Fed — Last 14 Days</div>
     <div class="bar-chart" id="foodChart"></div>
     <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>Meals Logged (max 4/day)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>Meals Fed (max 4/day)</div>
     </div>
   </div>
   <div class="section-header">📅 Full History</div>
@@ -231,10 +233,10 @@
   const typeEmojis = { pee: '💛', poop: '💩', both: '💛💩' };
   const typeLabels = { pee: 'Pee', poop: 'Poop', both: 'Pee & Poop' };
   const FOOD_SLOTS = [
-    { key: '7am',  label: '7am',  emoji: '🌅', placeholder: 'Breakfast…' },
-    { key: '11am', label: '11am', emoji: '☀️',  placeholder: 'Mid-morning…' },
-    { key: '3pm',  label: '3pm',  emoji: '🌤️', placeholder: 'Afternoon…' },
-    { key: '6pm',  label: '6pm',  emoji: '🌙', placeholder: 'Dinner…' },
+    { key: '7am',  label: 'Breakfast',  time: '7am',  emoji: '🌅' },
+    { key: '11am', label: 'Mid-morning', time: '11am', emoji: '☀️' },
+    { key: '3pm',  label: 'Afternoon',   time: '3pm',  emoji: '🌤️' },
+    { key: '6pm',  label: 'Dinner',      time: '6pm',  emoji: '🌙' },
   ];
 
   let selected = { type: null, location: null };
@@ -332,6 +334,7 @@
     }).join('');
   });
 
+  // ── FOOD TAB ──────────────────────────────────────────
   function initFoodTab() {
     const dateInput = document.getElementById('foodDate');
     const now = new Date();
@@ -344,20 +347,23 @@
     const dateKey = document.getElementById('foodDate').value;
     const dayData = allFoodData[dateKey] || {};
     document.getElementById('foodSlots').innerHTML = FOOD_SLOTS.map(slot => {
-      const val = dayData[slot.key] || '';
-      return '<div class="food-slot">' +
-        '<div class="food-slot-time">' + slot.label + '</div>' +
+      const checked = !!dayData[slot.key];
+      return '<div class="food-slot ' + (checked ? 'checked' : '') + '" onclick="toggleFoodSlot(\'' + slot.key + '\', \'' + dateKey + '\')">' +
         '<div class="food-slot-emoji">' + slot.emoji + '</div>' +
-        '<input class="food-input" id="food-input-' + slot.key + '" type="text" placeholder="' + slot.placeholder + '" value="' + val.replace(/"/g, '&quot;') + '" />' +
-        '<button class="food-log-btn ' + (val ? 'logged' : '') + '" onclick="saveFoodSlot(\'' + slot.key + '\', \'' + dateKey + '\')">' + (val ? '✓ Saved' : 'Save') + '</button>' +
+        '<div style="flex:1">' +
+          '<div class="food-slot-label">' + slot.label + '</div>' +
+          '<div class="food-slot-time-label">' + slot.time + '</div>' +
+        '</div>' +
+        '<div class="food-checkbox">' + (checked ? '✓' : '') + '</div>' +
       '</div>';
     }).join('');
   };
 
-  window.saveFoodSlot = async function(slot, dateKey) {
-    const val = document.getElementById('food-input-' + slot).value.trim();
-    await set(ref(db, 'food-logs/' + dateKey + '/' + slot), val || null);
-    showToast(val ? '🍗 ' + val + ' saved!' : '🗑️ Meal cleared');
+  window.toggleFoodSlot = async function(slot, dateKey) {
+    const dayData = allFoodData[dateKey] || {};
+    const current = !!dayData[slot];
+    await set(ref(db, 'food-logs/' + dateKey + '/' + slot), current ? null : true);
+    showToast(current ? '🗑️ Unmarked' : '🍗 Meal logged!');
   };
 
   onValue(foodRef, snapshot => {
@@ -371,20 +377,21 @@
     const todayKey = new Date().toISOString().slice(0, 10);
     const meals = allFoodData[todayKey] || {};
     const list = document.getElementById('foodLogList');
-    const filled = FOOD_SLOTS.filter(s => meals[s.key]);
-    if (!filled.length) {
+    const fed = FOOD_SLOTS.filter(s => meals[s.key]);
+    if (!fed.length) {
       list.innerHTML = '<div class="empty-state">No meals logged today 🐾</div>';
       return;
     }
-    list.innerHTML = filled.map(s =>
+    list.innerHTML = fed.map(s =>
       '<div class="food-history-slot">' +
-        '<div class="food-history-time">' + s.label + '</div>' +
+        '<div class="food-history-time">' + s.time + '</div>' +
         '<span>' + s.emoji + '</span>' +
-        '<div class="food-history-name">' + meals[s.key] + '</div>' +
+        '<div class="food-history-name">' + s.label + ' ✓</div>' +
       '</div>'
     ).join('');
   }
 
+  // ── HISTORY TAB ───────────────────────────────────────
   function renderHistory() {
     const pottyEntries = Object.values(allPottyData).sort((a, b) => new Date(a.time) - new Date(b.time));
     if (!pottyEntries.length && !Object.keys(allFoodData).length) {
@@ -446,13 +453,13 @@
     renderBarChart('foodChart', last14, 'food');
 
     document.getElementById('historyList').innerHTML = days.map(([dk, d]) => {
-      const meals = FOOD_SLOTS.filter(s => d.food[s.key]);
-      const mealHtml = meals.length
-        ? meals.map(s =>
+      const fedSlots = FOOD_SLOTS.filter(s => d.food[s.key]);
+      const mealHtml = fedSlots.length
+        ? fedSlots.map(s =>
             '<div class="food-history-slot">' +
-              '<div class="food-history-time">' + s.label + '</div>' +
+              '<div class="food-history-time">' + s.time + '</div>' +
               '<span style="font-size:0.9rem">' + s.emoji + '</span>' +
-              '<div class="food-history-name">' + d.food[s.key] + '</div>' +
+              '<div class="food-history-name">' + s.label + ' ✓</div>' +
             '</div>'
           ).join('')
         : '<div style="font-size:0.75rem;color:#c4a98a;font-weight:700;padding:4px 0;">No meals logged</div>';
@@ -462,7 +469,7 @@
           '<div class="history-day-pills">' +
             '<span class="history-pill pill-green">🌿 ' + d.outside + '</span>' +
             '<span class="history-pill pill-red">🏠 ' + d.inside + '</span>' +
-            '<span class="history-pill pill-blue">🍗 ' + meals.length + '/4</span>' +
+            '<span class="history-pill pill-blue">🍗 ' + fedSlots.length + '/4</span>' +
           '</div>' +
         '</div>' +
         mealHtml +
